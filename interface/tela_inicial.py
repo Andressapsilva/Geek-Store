@@ -1,6 +1,8 @@
 import tkinter as tk
 import customtkinter as ctk
 
+from dominio.jogo import Jogo
+
 
 # =========================
 # CONFIGURAÇÕES INICIAIS
@@ -10,10 +12,14 @@ ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
 
 
+# =========================
+# JANELA
+# =========================
+
 janela = ctk.CTk()
 
 janela.title("Geek Store")
-janela.geometry("1000x650")
+janela.geometry("1200x750")
 janela.resizable(False, False)
 
 
@@ -23,16 +29,23 @@ janela.resizable(False, False)
 
 jogos = [
 
-    {"nome": "Minecraft", "preco": 120},
+    Jogo("Minecraft", 120, 10),
 
-    {"nome": "Red Dead Redemption 2", "preco": 250},
+    Jogo("Red Dead Redemption 2", 250, 0),
 
-    {"nome": "Pragmata", "preco": 350},
+    Jogo("Pragmata", 350, 3),
 
-    {"nome": "Assassins Creed Black Flag", "preco": 90},
+    Jogo("Assassins Creed Black Flag", 90, 8),
 
-    {"nome": "Resident Evil Requiem", "preco": 280}
+    Jogo("Resident Evil Requiem", 280, 4)
 ]
+
+
+# =========================
+# CLIENTE VIP
+# =========================
+
+cliente_vip = True
 
 
 # =========================
@@ -57,7 +70,7 @@ def atualizar_carrinho():
 
     for item in itens_carrinho:
 
-        nome = item["nome"]
+        nome = item.nome
 
         if nome in contador:
 
@@ -67,7 +80,7 @@ def atualizar_carrinho():
 
             contador[nome] = {
                 "quantidade": 1,
-                "preco": item["preco"]
+                "preco": item.preco
             }
 
     for nome, dados in contador.items():
@@ -79,7 +92,19 @@ def atualizar_carrinho():
         )
 
     texto += "--------------------\n"
-    texto += f"💰 TOTAL: R$ {total}"
+
+    subtotal = total
+    desconto = 0
+    total_final = subtotal
+
+    if cliente_vip:
+
+        desconto = subtotal * 0.10
+        total_final = subtotal - desconto
+
+        texto += f"⭐ DESCONTO VIP: -R$ {desconto:.2f}\n"
+
+    texto += f"💰 TOTAL FINAL: R$ {total_final:.2f}"
 
     carrinho_texto.configure(text=texto)
 
@@ -88,25 +113,132 @@ def atualizar_carrinho():
 # FUNÇÃO ADICIONAR
 # =========================
 
-def adicionar_carrinho():
+def adicionar_carrinho(jogo):
 
     global total
 
-    indice = lista_jogos.curselection()
-
-    if indice:
-
-        jogo = jogos[indice[0]]
-
-        itens_carrinho.append(jogo)
-
-        total += jogo["preco"]
-
-        atualizar_carrinho()
+    if jogo.estoque <= 0:
 
         status.configure(
-            text=f"✅ {jogo['nome']} adicionado ao carrinho!"
+            text=f"❌ {jogo.nome} está indisponível!"
         )
+
+        return
+
+    jogo.estoque -= 1
+
+    itens_carrinho.append(jogo)
+
+    total += jogo.preco
+
+    atualizar_carrinho()
+
+    criar_cards()
+
+    status.configure(
+        text=f"✅ {jogo.nome} adicionado ao carrinho!"
+    )
+
+
+# =========================
+# FUNÇÃO CRIAR CARDS
+# =========================
+
+def criar_cards():
+
+    for widget in catalogo_scroll.winfo_children():
+
+        widget.destroy()
+
+    for jogo in jogos:
+
+        status_jogo = "✅ Disponível"
+        cor_status = "#2FA572"
+
+        if jogo.estoque <= 0:
+
+            status_jogo = "❌ Indisponível"
+            cor_status = "#D9534F"
+
+        card = ctk.CTkFrame(
+            catalogo_scroll,
+            fg_color="#2b2b2b",
+            corner_radius=15
+        )
+
+        card.pack(
+            fill="x",
+            padx=10,
+            pady=10
+        )
+
+        nome = ctk.CTkLabel(
+            card,
+            text=jogo.nome,
+            font=("Arial", 22, "bold")
+        )
+
+        nome.pack(
+            anchor="w",
+            padx=20,
+            pady=(15, 5)
+        )
+
+        preco = ctk.CTkLabel(
+            card,
+            text=f"💰 Preço: R$ {jogo.preco}",
+            font=("Arial", 16)
+        )
+
+        preco.pack(
+            anchor="w",
+            padx=20
+        )
+
+        estoque = ctk.CTkLabel(
+            card,
+            text=f"📦 Estoque: {jogo.estoque}",
+            font=("Arial", 16)
+        )
+
+        estoque.pack(
+            anchor="w",
+            padx=20
+        )
+
+        disponibilidade = ctk.CTkLabel(
+            card,
+            text=status_jogo,
+            text_color=cor_status,
+            font=("Arial", 16, "bold")
+        )
+
+        disponibilidade.pack(
+            anchor="w",
+            padx=20,
+            pady=(0, 10)
+        )
+
+        botao_jogo = ctk.CTkButton(
+            card,
+            text="Adicionar ao Carrinho",
+            height=42,
+            corner_radius=10,
+            fg_color="#5865F2",
+            hover_color="#4752C4",
+            font=("Arial", 15, "bold"),
+            command=lambda j=jogo: adicionar_carrinho(j)
+        )
+
+        botao_jogo.pack(
+            padx=20,
+            pady=(0, 15),
+            fill="x"
+        )
+
+        if jogo.estoque <= 0:
+
+            botao_jogo.configure(state="disabled")
 
 
 # =========================
@@ -117,10 +249,19 @@ def finalizar_compra():
 
     if itens_carrinho:
 
+        subtotal = total
+        desconto = 0
+        total_final = subtotal
+
+        if cliente_vip:
+
+            desconto = subtotal * 0.10
+            total_final = subtotal - desconto
+
         popup = ctk.CTkToplevel(janela)
 
         popup.title("Compra Finalizada")
-        popup.geometry("450x300")
+        popup.geometry("450x320")
         popup.resizable(False, False)
 
         popup.configure(fg_color="#1e1e1e")
@@ -141,21 +282,15 @@ def finalizar_compra():
             text=(
                 "Obrigado por comprar na\n"
                 "Geek Store!\n\n"
-                f"💰 Total pago: R$ {total}"
+                f"💰 Subtotal: R$ {subtotal:.2f}\n"
+                f"⭐ Desconto VIP: R$ {desconto:.2f}\n"
+                f"✅ Total Final: R$ {total_final:.2f}"
             ),
-            font=("Arial", 18),
+            font=("Arial", 17),
             justify="center"
         )
 
         texto_popup.pack(pady=10)
-
-        linha = ctk.CTkFrame(
-            popup,
-            height=2,
-            fg_color="#5865F2"
-        )
-
-        linha.pack(fill="x", padx=40, pady=15)
 
         botao_fechar = ctk.CTkButton(
             popup,
@@ -169,62 +304,13 @@ def finalizar_compra():
             command=popup.destroy
         )
 
-        botao_fechar.pack(pady=15)
-
-        carrinho_texto.configure(
-            text="✅ Compra finalizada!"
-        )
-
-        status.configure(
-            text="Obrigado por comprar na Geek Store!"
-        )
+        botao_fechar.pack(pady=20)
 
     else:
 
-        popup = ctk.CTkToplevel(janela)
-
-        popup.title("Aviso")
-        popup.geometry("400x250")
-        popup.resizable(False, False)
-
-        popup.configure(fg_color="#1e1e1e")
-
-        popup.grab_set()
-
-        aviso = ctk.CTkLabel(
-            popup,
-            text="⚠️ CARRINHO VAZIO",
-            font=("Arial", 26, "bold"),
-            text_color="#FFCC00"
+        status.configure(
+            text="⚠️ Carrinho vazio!"
         )
-
-        aviso.pack(pady=(35, 15))
-
-        texto = ctk.CTkLabel(
-            popup,
-            text=(
-                "Adicione um jogo antes\n"
-                "de finalizar a compra."
-            ),
-            font=("Arial", 16),
-            justify="center"
-        )
-
-        texto.pack(pady=10)
-
-        botao_ok = ctk.CTkButton(
-            popup,
-            text="OK",
-            width=160,
-            height=40,
-            corner_radius=12,
-            fg_color="#5865F2",
-            hover_color="#4752C4",
-            font=("Arial", 15, "bold"),
-            command=popup.destroy
-        )
-
-        botao_ok.pack(pady=20)
 
 
 # =========================
@@ -234,7 +320,7 @@ def finalizar_compra():
 titulo = ctk.CTkLabel(
     janela,
     text="GEEK STORE",
-    font=("Arial", 42, "bold"),
+    font=("Arial", 46, "bold"),
     text_color="#5865F2"
 )
 
@@ -244,7 +330,7 @@ titulo.pack(pady=(25, 5))
 subtitulo = ctk.CTkLabel(
     janela,
     text="Sua loja gamer digital",
-    font=("Arial", 16),
+    font=("Arial", 18),
     text_color="gray"
 )
 
@@ -289,62 +375,37 @@ frame_esquerdo.pack(
 
 
 # =========================
-# TEXTO CATÁLOGO
+# TÍTULO CATÁLOGO
 # =========================
 
 catalogo = ctk.CTkLabel(
     frame_esquerdo,
     text="CATÁLOGO DE JOGOS",
-    font=("Arial", 24, "bold")
+    font=("Arial", 28, "bold")
 )
 
 catalogo.pack(pady=20)
 
 
 # =========================
-# LISTA DE JOGOS
+# ÁREA SCROLLÁVEL
 # =========================
 
-lista_jogos = tk.Listbox(
+catalogo_scroll = ctk.CTkScrollableFrame(
     frame_esquerdo,
-    width=42,
-    height=15,
-    bg="#2b2b2b",
-    fg="white",
-    font=("Arial", 14),
-    selectbackground="#5865F2",
-    selectforeground="white",
-    bd=0,
-    highlightthickness=0
+    width=650,
+    height=450,
+    fg_color="#242424"
 )
 
-lista_jogos.pack(padx=20, pady=10)
-
-
-for jogo in jogos:
-
-    lista_jogos.insert(
-        tk.END,
-        f"{jogo['nome']} - R${jogo['preco']}"
-    )
-
-
-# =========================
-# BOTÃO ADICIONAR
-# =========================
-
-botao = ctk.CTkButton(
-    frame_esquerdo,
-    text="Adicionar ao Carrinho",
-    font=("Arial", 16, "bold"),
-    height=50,
-    corner_radius=12,
-    fg_color="#5865F2",
-    hover_color="#4752C4",
-    command=adicionar_carrinho
+catalogo_scroll.pack(
+    padx=20,
+    pady=10,
+    fill="both",
+    expand=True
 )
 
-botao.pack(pady=20)
+criar_cards()
 
 
 # =========================
@@ -353,12 +414,12 @@ botao.pack(pady=20)
 
 status = ctk.CTkLabel(
     frame_esquerdo,
-    text="Selecione um jogo para adicionar.",
-    font=("Arial", 13),
+    text="Selecione um jogo.",
+    font=("Arial", 14),
     text_color="gray"
 )
 
-status.pack(pady=(0, 15))
+status.pack(pady=15)
 
 
 # =========================
@@ -369,7 +430,7 @@ frame_direito = ctk.CTkFrame(
     frame_principal,
     fg_color="#242424",
     corner_radius=15,
-    width=340
+    width=350
 )
 
 frame_direito.pack(
@@ -389,7 +450,7 @@ frame_direito.pack_propagate(False)
 titulo_carrinho = ctk.CTkLabel(
     frame_direito,
     text="🛒 CARRINHO",
-    font=("Arial", 24, "bold")
+    font=("Arial", 28, "bold")
 )
 
 titulo_carrinho.pack(pady=20)
@@ -402,7 +463,7 @@ titulo_carrinho.pack(pady=20)
 carrinho_texto = ctk.CTkLabel(
     frame_direito,
     text="Carrinho vazio",
-    font=("Arial", 14),
+    font=("Arial", 15),
     justify="left",
     anchor="nw"
 )
@@ -421,7 +482,7 @@ carrinho_texto.pack(
 finalizar = ctk.CTkButton(
     frame_direito,
     text="Finalizar Compra",
-    font=("Arial", 16, "bold"),
+    font=("Arial", 17, "bold"),
     height=50,
     corner_radius=12,
     fg_color="#2FA572",
@@ -438,7 +499,9 @@ finalizar.pack(
 
 
 # =========================
-# RODAR JANELA
+# EXECUÇÃO
 # =========================
 
-janela.mainloop()
+if __name__ == "__main__":
+
+    janela.mainloop()
