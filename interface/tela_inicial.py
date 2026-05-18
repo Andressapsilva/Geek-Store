@@ -1,6 +1,8 @@
 import tkinter as tk
 import customtkinter as ctk
 
+from PIL import Image
+
 from dominio.jogo import Jogo
 
 
@@ -29,15 +31,70 @@ janela.resizable(False, False)
 
 jogos = [
 
-    Jogo("Minecraft", 120, 10),
+    # =========================
+    # INDIE
+    # =========================
 
-    Jogo("Red Dead Redemption 2", 250, 0),
+    {
+        "obj": Jogo("Minecraft", 120, 10),
+        "imagem": "imagens/minecraft.png"
+    },
 
-    Jogo("Pragmata", 350, 3),
+    {
+        "obj": Jogo("Hollow Knight", 80, 12),
+        "imagem": "imagens/hollow_knight.jpg"
+    },
 
-    Jogo("Assassins Creed Black Flag", 90, 8),
+    # =========================
+    # AAA
+    # =========================
 
-    Jogo("Resident Evil Requiem", 280, 4)
+    {
+        "obj": Jogo("Red Dead Redemption 2", 250, 5),
+        "imagem": "imagens/rdr2.jpg"
+    },
+
+    {
+        "obj": Jogo("Elden Ring", 299, 6),
+        "imagem": "imagens/elden_ring.jpg"
+    },
+
+    {
+        "obj": Jogo("GTA V", 140, 9),
+        "imagem": "imagens/gtav.jpg"
+    },
+
+    {
+        "obj": Jogo("Forza Horizon 6", 320, 4),
+        "imagem": "imagens/forza.jpg"
+    },
+
+    # =========================
+    # SCI-FI
+    # =========================
+
+    {
+        "obj": Jogo("Pragmata", 350, 3),
+        "imagem": "imagens/pragmata.jpg"
+    },
+
+    # =========================
+    # AVENTURA
+    # =========================
+
+    {
+        "obj": Jogo("Assassins Creed Black Flag", 90, 8),
+        "imagem": "imagens/black_flag.png"
+    },
+
+    # =========================
+    # TERROR
+    # =========================
+
+    {
+        "obj": Jogo("Resident Evil Requiem", 280, 4),
+        "imagem": "imagens/resident_evil.jpg"
+    }
 ]
 
 
@@ -62,9 +119,20 @@ total = 0
 
 def atualizar_carrinho():
 
-    texto = "====================\n"
-    texto += "🎮 ITENS NO CARRINHO\n"
-    texto += "====================\n\n"
+    carrinho_texto.configure(state="normal")
+
+    carrinho_texto.delete("1.0", "end")
+
+    if not itens_carrinho:
+
+        carrinho_texto.insert(
+            "1.0",
+            "🛒 Seu carrinho está vazio"
+        )
+
+        carrinho_texto.configure(state="disabled")
+
+        return
 
     contador = {}
 
@@ -83,30 +151,68 @@ def atualizar_carrinho():
                 "preco": item.preco
             }
 
+    quantidade_total = sum(
+        dados["quantidade"]
+        for dados in contador.values()
+    )
+
+    texto = ""
+
+    # =========================
+    # CABEÇALHO
+    # =========================
+
+    texto += "━━━━━━━━━━━━━━━━━━━━━━\n"
+    texto += f"🛒 {quantidade_total} ITEM(NS)\n"
+    texto += "━━━━━━━━━━━━━━━━━━━━━━\n\n"
+
+    # =========================
+    # ITENS
+    # =========================
+
     for nome, dados in contador.items():
+
+        subtotal_item = (
+            dados["quantidade"] *
+            dados["preco"]
+        )
 
         texto += (
             f"🎮 {nome}\n"
-            f"Quantidade: x{dados['quantidade']}\n"
-            f"Preço: R$ {dados['preco']}\n\n"
+            f"📦 x{dados['quantidade']}  •  "
+            f"💰 R$ {subtotal_item}\n\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━\n\n"
         )
 
-    texto += "--------------------\n"
+    # =========================
+    # RESUMO
+    # =========================
 
     subtotal = total
     desconto = 0
     total_final = subtotal
+
+    texto += "💳 RESUMO\n\n"
+
+    texto += f"💰 Subtotal: R$ {subtotal:.2f}\n"
 
     if cliente_vip:
 
         desconto = subtotal * 0.10
         total_final = subtotal - desconto
 
-        texto += f"⭐ DESCONTO VIP: -R$ {desconto:.2f}\n"
+        texto += (
+            f"⭐ VIP: -R$ {desconto:.2f}\n"
+        )
 
-    texto += f"💰 TOTAL FINAL: R$ {total_final:.2f}"
+    texto += (
+        f"\n💚 TOTAL FINAL\n"
+        f"R$ {total_final:.2f}"
+    )
 
-    carrinho_texto.configure(text=texto)
+    carrinho_texto.insert("1.0", texto)
+
+    carrinho_texto.configure(state="disabled")
 
 
 # =========================
@@ -139,6 +245,15 @@ def adicionar_carrinho(jogo):
         text=f"✅ {jogo.nome} adicionado ao carrinho!"
     )
 
+    # animação simples no status
+
+    status.after(
+        1500,
+        lambda: status.configure(
+            text="Selecione um jogo."
+        )
+    )
+
 
 # =========================
 # FUNÇÃO CRIAR CARDS
@@ -150,44 +265,153 @@ def criar_cards():
 
         widget.destroy()
 
-    for jogo in jogos:
+    categoria_atual = ""
 
-        status_jogo = "✅ Disponível"
+    for item in jogos:
+
+        jogo = item["obj"]
+
+        # =========================
+        # CATEGORIAS
+        # =========================
+
+        if jogo.nome in [
+            "Red Dead Redemption 2",
+            "Elden Ring",
+            "GTA V",
+            "Forza Horizon 6"
+        ]:
+
+            categoria = "🔥 AAA"
+
+        elif jogo.nome in [
+            "Minecraft",
+            "Hollow Knight"
+        ]:
+
+            categoria = "🎮 INDIE"
+
+        elif jogo.nome == "Resident Evil Requiem":
+
+            categoria = "👻 TERROR"
+
+        elif jogo.nome == "Assassins Creed Black Flag":
+
+            categoria = "⚔️ AVENTURA"
+
+        else:
+
+            categoria = "🚀 SCI-FI"
+
+        # =========================
+        # MOSTRAR CATEGORIA
+        # =========================
+
+        if categoria != categoria_atual:
+
+            categoria_atual = categoria
+
+            titulo_categoria = ctk.CTkLabel(
+                catalogo_scroll,
+                text=f"━━━━━━━━━━━━━━━━━━\n{categoria}\n━━━━━━━━━━━━━━━━━━",
+                font=("Arial", 28, "bold"),
+                text_color="#5865F2",
+                justify="left"
+            )
+
+            titulo_categoria.pack(
+                anchor="w",
+                padx=15,
+                pady=(30, 10)
+            )
+
+        # =========================
+        # STATUS
+        # =========================
+
+        status_jogo = "🟢 Disponível"
         cor_status = "#2FA572"
 
         if jogo.estoque <= 0:
 
-            status_jogo = "❌ Indisponível"
+            status_jogo = "🔴 Indisponível"
             cor_status = "#D9534F"
+
+        # =========================
+        # CARD
+        # =========================
 
         card = ctk.CTkFrame(
             catalogo_scroll,
-            fg_color="#2b2b2b",
-            corner_radius=15
+            fg_color="#262626",
+            corner_radius=18,
+            border_width=1,
+            border_color="#3a3a3a"
         )
 
         card.pack(
             fill="x",
-            padx=10,
-            pady=10
+            padx=15,
+            pady=22
         )
+
+        # =========================
+        # IMAGEM
+        # =========================
+
+        img = Image.open(item["imagem"])
+
+        img.thumbnail((650, 300))
+
+        imagem = ctk.CTkImage(
+            light_image=img,
+            dark_image=img,
+            size=img.size
+        )
+
+        frame_imagem = ctk.CTkFrame(
+            card,
+            fg_color="transparent"
+        )
+
+        frame_imagem.pack(
+            pady=(15, 10),
+            padx=15
+        )
+
+        label_imagem = ctk.CTkLabel(
+            frame_imagem,
+            text="",
+            image=imagem,
+            corner_radius=12
+        )
+
+        label_imagem.pack()
+
+        # =========================
+        # NOME
+        # =========================
 
         nome = ctk.CTkLabel(
             card,
-            text=jogo.nome,
-            font=("Arial", 22, "bold")
+            text=f"🎮 {jogo.nome}",
+            font=("Arial", 24, "bold")
         )
 
         nome.pack(
             anchor="w",
             padx=20,
-            pady=(15, 5)
+            pady=(5, 5)
         )
+
+        # =========================
+        # PREÇO
+        # =========================
 
         preco = ctk.CTkLabel(
             card,
             text=f"💰 Preço: R$ {jogo.preco}",
-            font=("Arial", 16)
+            font=("Arial", 17)
         )
 
         preco.pack(
@@ -195,10 +419,14 @@ def criar_cards():
             padx=20
         )
 
+        # =========================
+        # ESTOQUE
+        # =========================
+
         estoque = ctk.CTkLabel(
             card,
             text=f"📦 Estoque: {jogo.estoque}",
-            font=("Arial", 16)
+            font=("Arial", 17)
         )
 
         estoque.pack(
@@ -206,33 +434,41 @@ def criar_cards():
             padx=20
         )
 
+        # =========================
+        # DISPONIBILIDADE
+        # =========================
+
         disponibilidade = ctk.CTkLabel(
             card,
             text=status_jogo,
             text_color=cor_status,
-            font=("Arial", 16, "bold")
+            font=("Arial", 17, "bold")
         )
 
         disponibilidade.pack(
             anchor="w",
             padx=20,
-            pady=(0, 10)
+            pady=(0, 15)
         )
+
+        # =========================
+        # BOTÃO
+        # =========================
 
         botao_jogo = ctk.CTkButton(
             card,
             text="Adicionar ao Carrinho",
-            height=42,
-            corner_radius=10,
+            height=45,
+            corner_radius=12,
             fg_color="#5865F2",
             hover_color="#4752C4",
-            font=("Arial", 15, "bold"),
+            font=("Arial", 16, "bold"),
             command=lambda j=jogo: adicionar_carrinho(j)
         )
 
         botao_jogo.pack(
             padx=20,
-            pady=(0, 15),
+            pady=(0, 20),
             fill="x"
         )
 
@@ -334,7 +570,21 @@ subtitulo = ctk.CTkLabel(
     text_color="gray"
 )
 
-subtitulo.pack(pady=(0, 20))
+subtitulo.pack(pady=(0, 5))
+
+
+# =========================
+# BADGE VIP
+# =========================
+
+vip_label = ctk.CTkLabel(
+    janela,
+    text="⭐ CLIENTE VIP",
+    font=("Arial", 15, "bold"),
+    text_color="#FFD700"
+)
+
+vip_label.pack(pady=(0, 15))
 
 
 # =========================
@@ -381,20 +631,20 @@ frame_esquerdo.pack(
 catalogo = ctk.CTkLabel(
     frame_esquerdo,
     text="CATÁLOGO DE JOGOS",
-    font=("Arial", 28, "bold")
+    font=("Arial", 30, "bold")
 )
 
 catalogo.pack(pady=20)
 
 
 # =========================
-# ÁREA SCROLLÁVEL
+# ÁREA SCROLL
 # =========================
 
 catalogo_scroll = ctk.CTkScrollableFrame(
     frame_esquerdo,
-    width=650,
-    height=450,
+    width=720,
+    height=500,
     fg_color="#242424"
 )
 
@@ -457,22 +707,33 @@ titulo_carrinho.pack(pady=20)
 
 
 # =========================
-# TEXTO CARRINHO
+# CARRINHO SCROLL
 # =========================
 
-carrinho_texto = ctk.CTkLabel(
+carrinho_texto = ctk.CTkTextbox(
     frame_direito,
-    text="Carrinho vazio",
-    font=("Arial", 15),
-    justify="left",
-    anchor="nw"
+    width=300,
+    height=360,
+    font=("Arial", 16),
+    corner_radius=10,
+    fg_color="#1f1f1f",
+    border_width=1,
+    border_color="#333333",
+    text_color="white"
 )
 
 carrinho_texto.pack(
     padx=20,
-    pady=10,
-    anchor="nw"
+    pady=(10, 15),
+    fill="x"
 )
+
+carrinho_texto.insert(
+    "1.0",
+    "🛒 Seu carrinho está vazio"
+)
+
+carrinho_texto.configure(state="disabled")
 
 
 # =========================
@@ -492,7 +753,7 @@ finalizar = ctk.CTkButton(
 
 finalizar.pack(
     side="bottom",
-    pady=25,
+    pady=20,
     padx=20,
     fill="x"
 )
